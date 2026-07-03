@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>シンプルタスク管理</title>
+
+<style>
+  /* ==========================================================
+     ▼▼▼ ここから「見た目（デザイン）」の設定エリアです ▼▼▼
+     色を変えたい場合は、下の色コード（#から始まる文字）を
+     好きな色に書き換えるだけでOKです。
+     ========================================================== */
+
+  :root {
+    --color-primary: #4f46e5;      /* メインカラー（ボタンなど） */
+    --color-primary-dark: #4338ca; /* メインカラーのホバー時の色 */
+    --color-bg: #f3f4f6;           /* ページ全体の背景色 */
+    --color-card: #ffffff;         /* カードの背景色 */
+    --color-text: #1f2937;         /* 文字の色 */
+    --color-text-sub: #6b7280;     /* サブテキストの色（薄い文字） */
+    --color-border: #e5e7eb;       /* 枠線の色 */
+    --color-danger: #ef4444;       /* 削除ボタンの色 */
+    --color-danger-dark: #dc2626;  /* 削除ボタンのホバー時の色 */
+    --color-done: #10b981;         /* 完了タスクの色 */
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.6;
+  }
+
+  /* 全体を中央寄せするコンテナ */
+  .app-container {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+  }
+
+  /* ヘッダー部分 */
+  .app-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .app-header h1 {
+    font-size: 1.8rem;
+    margin: 0 0 4px;
+  }
+
+  .app-header p {
+    color: var(--color-text-sub);
+    font-size: 0.9rem;
+    margin: 0;
+  }
+
+  /* タスク追加フォームのカード */
+  .task-form-card {
+    background: var(--color-card);
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+  }
+
+  .task-form {
+    display: flex;
+    gap: 8px;
+  }
+
+  .task-form input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 1rem;
+    min-width: 0; /* スマホで潰れないようにする */
+  }
+
+  .task-form input[type="text"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .task-form button {
+    background-color: var(--color-primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0 18px;
+    font-size: 1rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background-color 0.2s;
+  }
+
+  .task-form button:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  /* フィルターボタンエリア */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-btn {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    color: var(--color-text-sub);
+    transition: all 0.15s;
+  }
+
+  .filter-btn.active {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+
+  /* タスク件数表示 */
+  .task-summary {
+    font-size: 0.85rem;
+    color: var(--color-text-sub);
+    margin-bottom: 8px;
+  }
+
+  /* タスク一覧 */
+  .task-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .task-item {
+    background: var(--color-card);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* チェックボックス（完了/未完了の切り替え） */
+  .task-checkbox {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    cursor: pointer;
+    accent-color: var(--color-done);
+  }
+
+  .task-text {
+    flex: 1;
+    font-size: 1rem;
+    word-break: break-word; /* 長いタスク名でも改行される */
+  }
+
+  /* 完了したタスクの見た目 */
+  .task-item.completed .task-text {
+    text-decoration: line-through;
+    color: var(--color-text-sub);
+  }
+
+  /* 削除ボタン */
+  .delete-btn {
+    background: none;
+    border: none;
+    color: var(--color-danger);
+    font-size: 1.1rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    flex-shrink: 0;
+    transition: background-color 0.15s;
+  }
+
+  .delete-btn:hover {
+    background-color: #fee2e2;
+    color: var(--color-danger-dark);
+  }
+
+  /* タスクが無い時の表示 */
+  .empty-message {
+    text-align: center;
+    color: var(--color-text-sub);
+    padding: 40px 0;
+    font-size: 0.95rem;
+  }
+
+  /* スマホ幅（600px以下）での調整 */
+  @media (max-width: 480px) {
+    .app-header h1 {
+      font-size: 1.5rem;
+    }
+    .task-form button {
+      padding: 0 14px;
+      font-size: 0.9rem;
+    }
+  }
+
+  /* ▲▲▲ デザイン設定エリアはここまで ▲▲▲ */
+</style>
+</head>
+<body>
+
+  <div class="app-container">
+
+    <!-- ヘッダー：タイトルや説明文はここで変更できます -->
+    <header class="app-header">
+      <h1>📝 シンプルタスク管理</h1>
+      <p>やることをサクッと管理しよう</p>
+    </header>
+
+    <!-- タスク追加フォーム -->
+    <section class="task-form-card">
+      <form id="task-form" class="task-form">
+        <input
+          type="text"
+          id="task-input"
+          placeholder="新しいタスクを入力…"
+          autocomplete="off"
+          maxlength="200"
+        >
+        <button type="submit">追加</button>
+      </form>
+    </section>
+
+    <!-- 表示切り替えフィルター（すべて／未完了／完了） -->
+    <div class="filter-bar">
+      <button class="filter-btn active" data-filter="all">すべて</button>
+      <button class="filter-btn" data-filter="active">未完了</button>
+      <button class="filter-btn" data-filter="completed">完了済み</button>
+    </div>
+
+    <!-- 件数表示 -->
+    <p class="task-summary" id="task-summary"></p>
+
+    <!-- タスク一覧がここに表示されます（JavaScriptで自動生成） -->
+    <ul class="task-list" id="task-list"></ul>
+
+    <!-- タスクが0件のときのメッセージ -->
+    <p class="empty-message" id="empty-message" style="display:none;">
+      タスクはまだありません。上のフォームから追加してみましょう！
+    </p>
+
+  </div>
+
+<script>
+  /* ==========================================================
+     ▼▼▼ ここから「機能（動き）」の設定エリアです ▼▼▼
+     基本的にこの下は編集不要ですが、
+     コメントを読めば「どこで何をしているか」がわかります。
+     ========================================================== */
+
+  // localStorage に保存する際のキー名（他のアプリと被らないように名前をつけている）
+  const STORAGE_KEY = "simple-task-manager-tasks";
+
+  // 画面上の要素を取得
+  const taskForm = document.getElementById("task-form");
+  const taskInput = document.getElementById("task-input");
+  const taskList = document.getElementById("task-list");
+  const emptyMessage = document.getElementById("empty-message");
+  const taskSummary = document.getElementById("task-summary");
+  const filterButtons = document.querySelectorAll(".filter-btn");
+
+  // 現在の絞り込み状態（all / active / completed）
+  let currentFilter = "all";
+
+  // タスクの配列を保持する変数
+  // 1つのタスクは { id, text, completed } という形のオブジェクト
+  let tasks = [];
+
+  /* ---------- localStorage への保存・読み込み ---------- */
+
+  // タスクの配列を localStorage に保存する関数
+  function saveTasks() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+
+  // localStorage からタスクの配列を読み込む関数
+  function loadTasks() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        tasks = JSON.parse(saved);
+      } catch (e) {
+        // 保存データが壊れていた場合は空の配列にする
+        tasks = [];
+      }
+    }
+  }
+
+  /* ---------- タスクの操作（追加・削除・切り替え） ---------- */
+
+  // 新しいタスクを追加する関数
+  function addTask(text) {
+    const newTask = {
+      id: Date.now().toString(), // 現在時刻を使った簡易的なユニークID
+      text: text,
+      completed: false
+    };
+    tasks.push(newTask);
+    saveTasks();
+    render();
+  }
+
+  // タスクの完了/未完了を切り替える関数
+  function toggleTask(id) {
+    const task = tasks.find(t => t.id === id);
+    if (task) {
+      task.completed = !task.completed;
+      saveTasks();
+      render();
+    }
+  }
+
+  // タスクを削除する関数
+  function deleteTask(id) {
+    tasks = tasks.filter(t => t.id !== id);
+    saveTasks();
+    render();
+  }
+
+  /* ---------- 画面の描画 ---------- */
+
+  // 現在のフィルターに応じてタスクを絞り込む関数
+  function getFilteredTasks() {
+    if (currentFilter === "active") {
+      return tasks.filter(t => !t.completed);
+    }
+    if (currentFilter === "completed") {
+      return tasks.filter(t => t.completed);
+    }
+    return tasks; // "all" の場合は全件
+  }
+
+  // 画面上のタスク一覧を再描画する関数
+  function render() {
+    const filtered = getFilteredTasks();
+
+    // 一覧を一旦空にしてから作り直す
+    taskList.innerHTML = "";
+
+    // タスクが0件の場合はメッセージを表示
+    if (filtered.length === 0) {
+      emptyMessage.style.display = "block";
+    } else {
+      emptyMessage.style.display = "none";
+    }
+
+    // タスクをひとつずつ <li> として追加する
+    filtered.forEach(task => {
+      const li = document.createElement("li");
+      li.className = "task-item" + (task.completed ? " completed" : "");
+
+      // 完了/未完了のチェックボックス
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "task-checkbox";
+      checkbox.checked = task.completed;
+      checkbox.addEventListener("change", () => toggleTask(task.id));
+
+      // タスク名のテキスト
+      const span = document.createElement("span");
+      span.className = "task-text";
+      span.textContent = task.text;
+
+      // 削除ボタン
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.textContent = "🗑 削除";
+      deleteBtn.addEventListener("click", () => deleteTask(task.id));
+
+      li.appendChild(checkbox);
+      li.appendChild(span);
+      li.appendChild(deleteBtn);
+      taskList.appendChild(li);
+    });
+
+    // 件数表示を更新（例: 全3件中 未完了2件）
+    const total = tasks.length;
+    const activeCount = tasks.filter(t => !t.completed).length;
+    const completedCount = total - activeCount;
+    taskSummary.textContent =
+      total === 0
+        ? ""
+        : `全${total}件中 / 未完了${activeCount}件 / 完了${completedCount}件`;
+  }
+
+  /* ---------- イベント設定 ---------- */
+
+  // フォーム送信時（「追加」ボタンを押した時 or Enterキーを押した時）の処理
+  taskForm.addEventListener("submit", function (e) {
+    e.preventDefault(); // ページの再読み込みを防ぐ
+    const text = taskInput.value.trim();
+    if (text === "") {
+      return; // 空欄の場合は何もしない
+    }
+    addTask(text);
+    taskInput.value = "";
+    taskInput.focus();
+  });
+
+  // フィルターボタンをクリックした時の処理
+  filterButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      // すべてのボタンから active クラスを外し、押されたボタンにだけ付ける
+      filterButtons.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      currentFilter = btn.dataset.filter;
+      render();
+    });
+  });
+
+  /* ---------- 初期化処理（ページを開いたときに実行される） ---------- */
+
+  loadTasks(); // 保存されているタスクを読み込む
+  render();    // 画面に反映する
+
+  /* ▲▲▲ 機能設定エリアはここまで ▲▲▲ */
+</script>
+
+</body>
+</html>
