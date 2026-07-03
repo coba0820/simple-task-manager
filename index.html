@@ -23,6 +23,12 @@
     --color-danger: #ef4444;       /* 削除ボタンの色 */
     --color-danger-dark: #dc2626;  /* 削除ボタンのホバー時の色 */
     --color-done: #10b981;         /* 完了タスクの色 */
+    --color-overdue: #dc2626;      /* 期限切れタスクの色 */
+
+    /* 優先度バッジの色（高・中・低） */
+    --color-priority-high: #ef4444;
+    --color-priority-medium: #f59e0b;
+    --color-priority-low: #3b82f6;
   }
 
   * {
@@ -73,11 +79,13 @@
 
   .task-form {
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
   }
 
+  /* タスク名の入力欄は横幅いっぱいまで広がる */
   .task-form input[type="text"] {
-    flex: 1;
+    flex: 1 1 100%;
     padding: 12px 14px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
@@ -85,7 +93,29 @@
     min-width: 0; /* スマホで潰れないようにする */
   }
 
-  .task-form input[type="text"]:focus {
+  /* 期限・優先度・追加ボタンを並べる行 */
+  .task-form-row {
+    display: flex;
+    gap: 8px;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+  }
+
+  .task-form input[type="date"],
+  .task-form select {
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background-color: #fff;
+    color: var(--color-text);
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .task-form input[type="text"]:focus,
+  .task-form input[type="date"]:focus,
+  .task-form select:focus {
     outline: none;
     border-color: var(--color-primary);
   }
@@ -100,18 +130,69 @@
     cursor: pointer;
     white-space: nowrap;
     transition: background-color 0.2s;
+    flex: 0 0 auto;
   }
 
   .task-form button:hover {
     background-color: var(--color-primary-dark);
   }
 
-  /* フィルターボタンエリア */
+  /* 入力欄の上に表示する小さいラベル */
+  .field-label {
+    font-size: 0.75rem;
+    color: var(--color-text-sub);
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .field-group {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  /* 検索ボックス */
+  .search-bar {
+    margin-bottom: 16px;
+  }
+
+  .search-bar input[type="search"] {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: #fff;
+  }
+
+  .search-bar input[type="search"]:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  /* フィルター・並び替えの行 */
   .filter-bar {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .sort-select {
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    font-size: 0.85rem;
+    background-color: #fff;
+    color: var(--color-text-sub);
+    cursor: pointer;
   }
 
   .filter-btn {
@@ -153,10 +234,15 @@
     border-radius: 10px;
     padding: 12px 14px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     animation: fadeIn 0.2s ease;
+  }
+
+  /* 期限切れ（未完了かつ期限を過ぎている）タスクは左に赤いラインを表示 */
+  .task-item.overdue {
+    border-left: 4px solid var(--color-overdue);
   }
 
   @keyframes fadeIn {
@@ -171,10 +257,16 @@
     flex-shrink: 0;
     cursor: pointer;
     accent-color: var(--color-done);
+    margin-top: 2px;
+  }
+
+  /* タスクの文章・付随情報をまとめるエリア */
+  .task-main {
+    flex: 1;
+    min-width: 0;
   }
 
   .task-text {
-    flex: 1;
     font-size: 1rem;
     word-break: break-word; /* 長いタスク名でも改行される */
   }
@@ -185,22 +277,135 @@
     color: var(--color-text-sub);
   }
 
-  /* 削除ボタン */
-  .delete-btn {
+  /* タスクの下に並ぶメタ情報（期限・優先度） */
+  .task-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  /* 優先度バッジ */
+  .badge {
+    display: inline-block;
+    font-size: 0.72rem;
+    padding: 2px 8px;
+    border-radius: 999px;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .badge-priority-high   { background-color: var(--color-priority-high); }
+  .badge-priority-medium { background-color: var(--color-priority-medium); }
+  .badge-priority-low    { background-color: var(--color-priority-low); }
+
+  /* 期限バッジ */
+  .badge-due {
+    background-color: #e5e7eb;
+    color: var(--color-text-sub);
+  }
+
+  .badge-due.overdue {
+    background-color: #fee2e2;
+    color: var(--color-overdue);
+    font-weight: bold;
+  }
+
+  /* タスクごとの操作ボタン（編集・削除）をまとめるエリア */
+  .task-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  /* 編集・削除ボタン共通（アイコンのみ表示、少し小さめのサイズ） */
+  .icon-btn {
     background: none;
     border: none;
-    color: var(--color-danger);
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 4px 6px;
     border-radius: 6px;
     flex-shrink: 0;
+    line-height: 1;
     transition: background-color 0.15s;
+  }
+
+  .edit-btn {
+    color: var(--color-primary);
+  }
+
+  .edit-btn:hover {
+    background-color: #e0e7ff;
+  }
+
+  .delete-btn {
+    color: var(--color-danger);
   }
 
   .delete-btn:hover {
     background-color: #fee2e2;
     color: var(--color-danger-dark);
+  }
+
+  /* ---- 編集モード時の入力フォーム ---- */
+  .edit-form {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .edit-form input[type="text"] {
+    flex: 1 1 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--color-primary);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    min-width: 0;
+  }
+
+  .edit-form input[type="date"],
+  .edit-form select {
+    padding: 6px 8px;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    flex: 1 1 120px;
+    min-width: 0;
+  }
+
+  .edit-form-buttons {
+    display: flex;
+    gap: 6px;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  .edit-form-buttons button {
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  .save-btn {
+    background-color: var(--color-primary);
+    color: #fff;
+  }
+
+  .save-btn:hover {
+    background-color: var(--color-primary-dark);
+  }
+
+  .cancel-btn {
+    background-color: #e5e7eb;
+    color: var(--color-text);
+  }
+
+  .cancel-btn:hover {
+    background-color: #d1d5db;
   }
 
   /* タスクが無い時の表示 */
@@ -219,6 +424,16 @@
     .task-form button {
       padding: 0 14px;
       font-size: 0.9rem;
+    }
+    .filter-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .edit-form-buttons {
+      justify-content: stretch;
+    }
+    .edit-form-buttons button {
+      flex: 1;
     }
   }
 
@@ -245,15 +460,44 @@
           autocomplete="off"
           maxlength="200"
         >
-        <button type="submit">追加</button>
+        <div class="task-form-row">
+          <!-- 期限（締切日）の入力欄：任意入力（空でもOK） -->
+          <div class="field-group">
+            <label class="field-label" for="task-due-input">期限（任意）</label>
+            <input type="date" id="task-due-input">
+          </div>
+          <!-- 優先度の選択欄：高・中・低から選べる（初期値は「中」） -->
+          <div class="field-group">
+            <label class="field-label" for="task-priority-input">優先度</label>
+            <select id="task-priority-input">
+              <option value="high">高</option>
+              <option value="medium" selected>中</option>
+              <option value="low">低</option>
+            </select>
+          </div>
+          <button type="submit">追加</button>
+        </div>
       </form>
     </section>
 
-    <!-- 表示切り替えフィルター（すべて／未完了／完了） -->
+    <!-- 検索ボックス：入力するとタスク名で絞り込まれます -->
+    <div class="search-bar">
+      <input type="search" id="search-input" placeholder="🔍 タスクを検索…" autocomplete="off">
+    </div>
+
+    <!-- 表示切り替えフィルター（すべて／未完了／完了）と並び替え -->
     <div class="filter-bar">
-      <button class="filter-btn active" data-filter="all">すべて</button>
-      <button class="filter-btn" data-filter="active">未完了</button>
-      <button class="filter-btn" data-filter="completed">完了済み</button>
+      <div class="filter-buttons">
+        <button class="filter-btn active" data-filter="all">すべて</button>
+        <button class="filter-btn" data-filter="active">未完了</button>
+        <button class="filter-btn" data-filter="completed">完了済み</button>
+      </div>
+      <!-- 並び替えの選択欄 -->
+      <select id="sort-select" class="sort-select">
+        <option value="created">追加順</option>
+        <option value="due">期限が近い順</option>
+        <option value="priority">優先度順</option>
+      </select>
     </div>
 
     <!-- 件数表示 -->
@@ -279,9 +523,16 @@
   // localStorage に保存する際のキー名（他のアプリと被らないように名前をつけている）
   const STORAGE_KEY = "simple-task-manager-tasks";
 
+  // 「すべて／未完了／完了済み」の表示状態を保存する際のキー名
+  const FILTER_STORAGE_KEY = "simple-task-manager-filter";
+
   // 画面上の要素を取得
   const taskForm = document.getElementById("task-form");
   const taskInput = document.getElementById("task-input");
+  const taskDueInput = document.getElementById("task-due-input");
+  const taskPriorityInput = document.getElementById("task-priority-input");
+  const searchInput = document.getElementById("search-input");
+  const sortSelect = document.getElementById("sort-select");
   const taskList = document.getElementById("task-list");
   const emptyMessage = document.getElementById("empty-message");
   const taskSummary = document.getElementById("task-summary");
@@ -290,8 +541,25 @@
   // 現在の絞り込み状態（all / active / completed）
   let currentFilter = "all";
 
+  // 現在の検索キーワード（小文字に変換して保持）
+  let currentSearch = "";
+
+  // 現在の並び替え方法（created / due / priority）
+  let currentSort = "created";
+
+  // 現在編集中のタスクID（編集していない時は null）
+  let editingTaskId = null;
+
+  // 優先度の並び順を比較するための数値（数字が小さいほど優先度が高い）
+  const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+
+  // 優先度に対応する日本語ラベル
+  const PRIORITY_LABEL = { high: "高", medium: "中", low: "低" };
+
   // タスクの配列を保持する変数
-  // 1つのタスクは { id, text, completed } という形のオブジェクト
+  // 1つのタスクは { id, text, completed, dueDate, priority } という形のオブジェクト
+  // dueDate: "YYYY-MM-DD" 形式の文字列、または未設定の場合は ""
+  // priority: "high" | "medium" | "low"
   let tasks = [];
 
   /* ---------- localStorage への保存・読み込み ---------- */
@@ -299,6 +567,22 @@
   // タスクの配列を localStorage に保存する関数
   function saveTasks() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  }
+
+  // 現在の表示フィルター（すべて／未完了／完了済み）を localStorage に保存する関数
+  function saveFilter() {
+    localStorage.setItem(FILTER_STORAGE_KEY, currentFilter);
+  }
+
+  // 保存されている表示フィルターを読み込む関数
+  // 保存されていない場合や不正な値の場合は "all"（すべて）にする
+  function loadFilter() {
+    const saved = localStorage.getItem(FILTER_STORAGE_KEY);
+    if (saved === "all" || saved === "active" || saved === "completed") {
+      currentFilter = saved;
+    } else {
+      currentFilter = "all";
+    }
   }
 
   // localStorage からタスクの配列を読み込む関数
@@ -312,16 +596,27 @@
         tasks = [];
       }
     }
+
+    // 以前のバージョン（期限・優先度が無かった頃）のデータを開いた場合に備えて、
+    // dueDate / priority が無いタスクにはデフォルト値を補う
+    tasks = tasks.map(t => ({
+      ...t,
+      dueDate: t.dueDate || "",
+      priority: t.priority || "medium"
+    }));
   }
 
   /* ---------- タスクの操作（追加・削除・切り替え） ---------- */
 
   // 新しいタスクを追加する関数
-  function addTask(text) {
+  // dueDate: 期限（未入力の場合は空文字） / priority: "high" | "medium" | "low"
+  function addTask(text, dueDate, priority) {
     const newTask = {
       id: Date.now().toString(), // 現在時刻を使った簡易的なユニークID
       text: text,
-      completed: false
+      completed: false,
+      dueDate: dueDate || "",
+      priority: priority || "medium"
     };
     tasks.push(newTask);
     saveTasks();
@@ -340,27 +635,255 @@
 
   // タスクを削除する関数
   function deleteTask(id) {
+    // 誤操作での削除を防ぐために確認ダイアログを表示
+    const target = tasks.find(t => t.id === id);
+    if (!target) return;
+    const ok = window.confirm(`「${target.text}」を削除しますか？`);
+    if (!ok) return;
+
     tasks = tasks.filter(t => t.id !== id);
     saveTasks();
     render();
   }
 
+  // タスクを編集モードに切り替える関数（フォーム表示）
+  function startEditTask(id) {
+    editingTaskId = id;
+    render();
+  }
+
+  // 編集をキャンセルして通常表示に戻す関数
+  function cancelEditTask() {
+    editingTaskId = null;
+    render();
+  }
+
+  // 編集内容を保存する関数
+  function saveEditTask(id, newText, newDueDate, newPriority) {
+    const task = tasks.find(t => t.id === id);
+    if (!task) return;
+
+    const trimmed = newText.trim();
+    if (trimmed === "") {
+      window.alert("タスク名を入力してください。");
+      return;
+    }
+
+    task.text = trimmed;
+    task.dueDate = newDueDate || "";
+    task.priority = newPriority || "medium";
+
+    editingTaskId = null;
+    saveTasks();
+    render();
+  }
+
+  /* ---------- 日付まわりの補助関数 ---------- */
+
+  // 今日の日付を "YYYY-MM-DD" 形式で取得する関数（時刻部分を切り捨てて比較しやすくする）
+  function getTodayString() {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, "0");
+    const d = String(now.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  // 期限が今日より前で、かつ未完了の場合に true を返す関数（＝期限切れ判定）
+  function isOverdue(task) {
+    if (!task.dueDate || task.completed) return false;
+    return task.dueDate < getTodayString();
+  }
+
+  // "YYYY-MM-DD" を "2026/07/03" のような表示用の文字列に変換する関数
+  function formatDateForDisplay(dateStr) {
+    if (!dateStr) return "";
+    const [y, m, d] = dateStr.split("-");
+    return `${y}/${m}/${d}`;
+  }
+
   /* ---------- 画面の描画 ---------- */
 
-  // 現在のフィルターに応じてタスクを絞り込む関数
+  // 現在のフィルター・検索キーワードに応じてタスクを絞り込む関数
   function getFilteredTasks() {
+    let result = tasks;
+
+    // 完了状態での絞り込み
     if (currentFilter === "active") {
-      return tasks.filter(t => !t.completed);
+      result = result.filter(t => !t.completed);
+    } else if (currentFilter === "completed") {
+      result = result.filter(t => t.completed);
     }
-    if (currentFilter === "completed") {
-      return tasks.filter(t => t.completed);
+
+    // 検索キーワードでの絞り込み（タスク名に部分一致するものだけ残す）
+    if (currentSearch !== "") {
+      result = result.filter(t =>
+        t.text.toLowerCase().includes(currentSearch)
+      );
     }
-    return tasks; // "all" の場合は全件
+
+    return result;
+  }
+
+  // 現在の並び替え設定に応じてタスクを並び替える関数
+  function getSortedTasks(list) {
+    // 元の配列を壊さないようにコピーしてから並び替える
+    const sorted = [...list];
+
+    if (currentSort === "due") {
+      // 期限が近い順（期限未設定のタスクは一番後ろに表示）
+      sorted.sort((a, b) => {
+        if (!a.dueDate && !b.dueDate) return 0;
+        if (!a.dueDate) return 1;
+        if (!b.dueDate) return -1;
+        return a.dueDate.localeCompare(b.dueDate);
+      });
+    } else if (currentSort === "priority") {
+      // 優先度順（高 → 中 → 低）
+      sorted.sort((a, b) => PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority]);
+    }
+    // "created"（追加順）の場合は何もせず、そのままの並び順を使う
+
+    return sorted;
+  }
+
+  // 1件のタスクを「通常表示」の <li> として組み立てる関数
+  function buildTaskItem(task) {
+    const li = document.createElement("li");
+    const overdue = isOverdue(task);
+    li.className = "task-item"
+      + (task.completed ? " completed" : "")
+      + (overdue ? " overdue" : "");
+
+    // 完了/未完了のチェックボックス
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.className = "task-checkbox";
+    checkbox.checked = task.completed;
+    checkbox.addEventListener("change", () => toggleTask(task.id));
+
+    // タスク名・メタ情報（期限・優先度）をまとめるエリア
+    const main = document.createElement("div");
+    main.className = "task-main";
+
+    // タスク名のテキスト
+    const span = document.createElement("span");
+    span.className = "task-text";
+    span.textContent = task.text;
+    main.appendChild(span);
+
+    // メタ情報（優先度バッジ・期限バッジ）の行
+    const meta = document.createElement("div");
+    meta.className = "task-meta";
+
+    // 優先度バッジ
+    const priorityBadge = document.createElement("span");
+    priorityBadge.className = `badge badge-priority-${task.priority}`;
+    priorityBadge.textContent = `優先度: ${PRIORITY_LABEL[task.priority] || "中"}`;
+    meta.appendChild(priorityBadge);
+
+    // 期限バッジ（期限が設定されている場合のみ表示）
+    if (task.dueDate) {
+      const dueBadge = document.createElement("span");
+      dueBadge.className = "badge badge-due" + (overdue ? " overdue" : "");
+      dueBadge.textContent = (overdue ? "⚠ 期限切れ: " : "期限: ") + formatDateForDisplay(task.dueDate);
+      meta.appendChild(dueBadge);
+    }
+
+    main.appendChild(meta);
+
+    // 編集・削除ボタンをまとめるエリア
+    const actions = document.createElement("div");
+    actions.className = "task-actions";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "icon-btn edit-btn";
+    editBtn.textContent = "✏️";
+    editBtn.setAttribute("aria-label", "編集"); // アイコンのみでも読み上げ・意味が分かるようにする
+    editBtn.title = "編集";
+    editBtn.addEventListener("click", () => startEditTask(task.id));
+
+    const deleteBtn = document.createElement("button");
+    deleteBtn.className = "icon-btn delete-btn";
+    deleteBtn.textContent = "🗑";
+    deleteBtn.setAttribute("aria-label", "削除");
+    deleteBtn.title = "削除";
+    deleteBtn.addEventListener("click", () => deleteTask(task.id));
+
+    actions.appendChild(editBtn);
+    actions.appendChild(deleteBtn);
+
+    li.appendChild(checkbox);
+    li.appendChild(main);
+    li.appendChild(actions);
+
+    return li;
+  }
+
+  // 1件のタスクを「編集モード」の <li>（入力フォーム）として組み立てる関数
+  function buildEditItem(task) {
+    const li = document.createElement("li");
+    li.className = "task-item";
+
+    const form = document.createElement("form");
+    form.className = "edit-form";
+
+    // タスク名の入力欄
+    const textInput = document.createElement("input");
+    textInput.type = "text";
+    textInput.value = task.text;
+    textInput.maxLength = 200;
+    form.appendChild(textInput);
+
+    // 期限の入力欄
+    const dueInput = document.createElement("input");
+    dueInput.type = "date";
+    dueInput.value = task.dueDate || "";
+    form.appendChild(dueInput);
+
+    // 優先度の選択欄
+    const prioritySelect = document.createElement("select");
+    ["high", "medium", "low"].forEach(value => {
+      const opt = document.createElement("option");
+      opt.value = value;
+      opt.textContent = PRIORITY_LABEL[value];
+      if (value === task.priority) opt.selected = true;
+      prioritySelect.appendChild(opt);
+    });
+    form.appendChild(prioritySelect);
+
+    // 保存・キャンセルボタン
+    const buttonRow = document.createElement("div");
+    buttonRow.className = "edit-form-buttons";
+
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "submit";
+    saveBtn.className = "save-btn";
+    saveBtn.textContent = "保存";
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "cancel-btn";
+    cancelBtn.textContent = "キャンセル";
+    cancelBtn.addEventListener("click", cancelEditTask);
+
+    buttonRow.appendChild(saveBtn);
+    buttonRow.appendChild(cancelBtn);
+    form.appendChild(buttonRow);
+
+    // フォーム送信時（保存ボタン押下 or Enterキー）に保存処理を実行
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      saveEditTask(task.id, textInput.value, dueInput.value, prioritySelect.value);
+    });
+
+    li.appendChild(form);
+    return li;
   }
 
   // 画面上のタスク一覧を再描画する関数
   function render() {
-    const filtered = getFilteredTasks();
+    const filtered = getSortedTasks(getFilteredTasks());
 
     // 一覧を一旦空にしてから作り直す
     taskList.innerHTML = "";
@@ -368,36 +891,18 @@
     // タスクが0件の場合はメッセージを表示
     if (filtered.length === 0) {
       emptyMessage.style.display = "block";
+      emptyMessage.textContent = tasks.length === 0
+        ? "タスクはまだありません。上のフォームから追加してみましょう！"
+        : "条件に一致するタスクが見つかりませんでした。";
     } else {
       emptyMessage.style.display = "none";
     }
 
-    // タスクをひとつずつ <li> として追加する
+    // タスクをひとつずつ <li> として追加する（編集中のタスクは編集フォームを表示）
     filtered.forEach(task => {
-      const li = document.createElement("li");
-      li.className = "task-item" + (task.completed ? " completed" : "");
-
-      // 完了/未完了のチェックボックス
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      checkbox.className = "task-checkbox";
-      checkbox.checked = task.completed;
-      checkbox.addEventListener("change", () => toggleTask(task.id));
-
-      // タスク名のテキスト
-      const span = document.createElement("span");
-      span.className = "task-text";
-      span.textContent = task.text;
-
-      // 削除ボタン
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "delete-btn";
-      deleteBtn.textContent = "🗑 削除";
-      deleteBtn.addEventListener("click", () => deleteTask(task.id));
-
-      li.appendChild(checkbox);
-      li.appendChild(span);
-      li.appendChild(deleteBtn);
+      const li = (task.id === editingTaskId)
+        ? buildEditItem(task)
+        : buildTaskItem(task);
       taskList.appendChild(li);
     });
 
@@ -405,10 +910,12 @@
     const total = tasks.length;
     const activeCount = tasks.filter(t => !t.completed).length;
     const completedCount = total - activeCount;
+    const overdueCount = tasks.filter(isOverdue).length;
     taskSummary.textContent =
       total === 0
         ? ""
-        : `全${total}件中 / 未完了${activeCount}件 / 完了${completedCount}件`;
+        : `全${total}件中 / 未完了${activeCount}件 / 完了${completedCount}件`
+          + (overdueCount > 0 ? ` / ⚠ 期限切れ${overdueCount}件` : "");
   }
 
   /* ---------- イベント設定 ---------- */
@@ -420,8 +927,12 @@
     if (text === "") {
       return; // 空欄の場合は何もしない
     }
-    addTask(text);
+    addTask(text, taskDueInput.value, taskPriorityInput.value);
+
+    // 入力欄をリセット（優先度は「中」に戻す）
     taskInput.value = "";
+    taskDueInput.value = "";
+    taskPriorityInput.value = "medium";
     taskInput.focus();
   });
 
@@ -432,14 +943,37 @@
       filterButtons.forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
       currentFilter = btn.dataset.filter;
+      saveFilter(); // 選んだ表示状態を保存し、次回開いたときも同じ状態にする
       render();
     });
   });
 
+  // 画面上のフィルターボタンの見た目を、現在の currentFilter に合わせて更新する関数
+  // （ページを開いた直後に、保存されていたフィルターの状態を反映するために使う）
+  function applyFilterButtonUI() {
+    filterButtons.forEach(b => {
+      b.classList.toggle("active", b.dataset.filter === currentFilter);
+    });
+  }
+
+  // 検索ボックスに文字を入力するたびに絞り込みを実行
+  searchInput.addEventListener("input", () => {
+    currentSearch = searchInput.value.trim().toLowerCase();
+    render();
+  });
+
+  // 並び替えの選択欄を変更した時の処理
+  sortSelect.addEventListener("change", () => {
+    currentSort = sortSelect.value;
+    render();
+  });
+
   /* ---------- 初期化処理（ページを開いたときに実行される） ---------- */
 
-  loadTasks(); // 保存されているタスクを読み込む
-  render();    // 画面に反映する
+  loadTasks();          // 保存されているタスクを読み込む
+  loadFilter();         // 前回閉じたときの表示フィルター（すべて／未完了／完了済み）を読み込む
+  applyFilterButtonUI(); // 読み込んだフィルターの状態をボタンの見た目に反映する
+  render();             // 画面に反映する
 
   /* ▲▲▲ 機能設定エリアはここまで ▲▲▲ */
 </script>
